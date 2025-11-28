@@ -1,0 +1,31 @@
+name: Auto Create PR
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  update-files:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Modify README
+        run: |
+          echo "Letzte Aktualisierung: $(date)" >> README.md
+
+      - name: Update version.txt
+        run: |
+          echo "version=$(date +%s)" > version.txt
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Automatische Aktualisierung"
+          branch: auto/update-files    # PR-Branch
+          title: "Automatischer Update-PR"
+          body: "Dieser Pull Request wurde automatisch erstellt."
+          labels: auto-update
