@@ -26,3 +26,4 @@ App starten:
 ```bash
 flask --app app run --host 0.0.0.0 --port 5002
 ```
+Letzte Aktualisierung: Fri Jan 16 11:46:06 UTC 2026
