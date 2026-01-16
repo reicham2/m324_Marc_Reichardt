@@ -1,20 +1,72 @@
-"""Unit tests for the Flask application."""
+import mysql.connector
 import pytest
 
-
-def test_app_exists():
-    """Test that the Flask app can be imported."""
-    from app import app
-    assert app is not None
+import app
 
 
-def test_app_is_testing(app_fixture):
-    """Test that the app is configured for testing."""
-    assert app_fixture.config['TESTING'] is True
+class DummyCursor:
+    def __init__(self, fixtures):
+        self.fixtures = fixtures
+        self.last_query = ""
+
+    def execute(self, query):
+        self.last_query = query
+
+    def fetchall(self):
+        if self.last_query == "SHOW TABLES":
+            return [(name,) for name in self.fixtures.keys()]
+
+        if self.last_query.startswith("DESCRIBE "):
+            table = self.last_query.split(" ", 1)[1]
+            return [(col,) for col in self.fixtures[table]["columns"]]
+
+        if self.last_query.startswith("SELECT * FROM "):
+            table = self.last_query.split(" ", 3)[-1]
+            return self.fixtures[table]["rows"]
+
+        return []
+
+    def close(self):
+        return None
 
 
-def test_app_has_hello_route(app_fixture):
-    """Test that the Flask app is properly instantiated."""
-    # Basic test that the app object exists
-    from app import Flask
-    assert isinstance(app_fixture, type(Flask(__name__)))
+class DummyConnection:
+    def __init__(self, fixtures):
+        self.cursor_obj = DummyCursor(fixtures)
+
+    def cursor(self):
+        return self.cursor_obj
+
+    def close(self):
+        return None
+
+
+@pytest.fixture
+def table_fixtures():
+    return {
+        "users": {
+            "columns": ["id", "name"],
+            "rows": [(1, "Alice"), (2, "Bob")],
+        },
+        "orders": {
+            "columns": ["id", "product"],
+            "rows": [(1, "Widget")],
+        },
+    }
+
+
+def test_index_renders_table_data(monkeypatch, table_fixtures):
+    def fake_connect(**kwargs):
+        return DummyConnection(table_fixtures)
+
+    monkeypatch.setattr(mysql.connector, "connect", fake_connect)
+
+    client = app.app.test_client()
+    response = client.get("/")
+
+    assert response.status_code == 200
+    body = response.data.decode()
+    assert "users" in body
+    assert "orders" in body
+    assert "Alice" in body
+    assert "Widget" in body
