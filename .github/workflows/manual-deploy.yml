@@ -1,0 +1,30 @@
+name: Manual Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  manual-deploy:
+    name: Manual Deployment
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to ${{ github.event.inputs.environment }}
+        run: |
+          echo "Deploying to ${{ github.event.inputs.environment }}..."
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }} \
+            -H 'Content-Type: application/json' \
+            -d '{"environment":"${{ github.event.inputs.environment }}"}' \
+            -v
