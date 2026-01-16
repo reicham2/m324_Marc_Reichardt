@@ -1,0 +1,48 @@
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql-demo
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: demo
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3308:3306"
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - mynet
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin-demo
+    depends_on:
+      - mysql
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    networks:
+      - mynet
+
+  webapp:
+    build: .
+    container_name: webapp-demo
+    depends_on:
+      - mysql
+    ports:
+      - "5002:5002"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: demo
+    networks:
+      - mynet
+
+networks:
+  mynet:
+    driver: bridge
